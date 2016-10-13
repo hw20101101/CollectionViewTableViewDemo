@@ -15,6 +15,10 @@
  */
 @property (nonatomic, assign) NSInteger index;
 
-@property (nonatomic, strong) UINavigationController *navigationController;
+
+/**
+ UITableViewCell选中时的回调
+ */
+@property (nonatomic, copy) void (^didSelectRowCallBack) (NSString *content);
 
 @end

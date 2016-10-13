@@ -7,10 +7,14 @@
 //
 
 #define kCellIdentifier @"HWCollectionViewCell"
+#define kScrollViewY 64
+#define kScrollViewH 35
+#define kCollectionViewY kScrollViewY + kScrollViewH
 #define kButtonW 65.0
 
 #import "ViewController.h"
 #import "HWCollectionViewCell.h"
+#import "HWDetailViewController.h"
 
 @interface ViewController ()<UICollectionViewDelegate, UICollectionViewDataSource, UICollectionViewDelegateFlowLayout, UIScrollViewDelegate>
 
@@ -18,7 +22,21 @@
  UICollectionView当前显示的cell的索引
  */
 @property (nonatomic, assign) NSInteger cellIndex;
+
+/**
+ collectionViewCell的宽度
+ */
+@property (nonatomic, assign) CGFloat cellWidth;
+
+/**
+ collectionViewCell的高度
+ */
+@property (nonatomic, assign) CGFloat cellHeight;
 @property (nonatomic, strong) UIView *lineBgView;
+
+/**
+ 标签条的文本数组
+ */
 @property (nonatomic, strong) NSArray *tabTitleArray;
 @property (nonatomic, strong) UIScrollView *scrollView;
 @property (nonatomic, strong) UICollectionView *collectionView;
@@ -27,14 +45,46 @@
 
 @implementation ViewController
 
+#pragma mark - Rotation
+-(void)willRotateToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation duration:(NSTimeInterval)duration
+{
+    [super willRotateToInterfaceOrientation:toInterfaceOrientation duration:duration];
+}
+
+-(void)willAnimateRotationToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation duration:(NSTimeInterval)duration
+{
+    [super willAnimateRotationToInterfaceOrientation:toInterfaceOrientation duration:duration];
+    [self setCellWidthHeight];
+    [self.collectionView reloadData];
+    [self.collectionView scrollToItemAtIndexPath:[NSIndexPath indexPathForRow:0 inSection:0] atScrollPosition:UICollectionViewScrollPositionNone animated:NO];
+}
+
+-(BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation
+{
+    return YES;
+}
+
+-(void)didRotateFromInterfaceOrientation:(UIInterfaceOrientation)fromInterfaceOrientation
+{
+    [super didRotateFromInterfaceOrientation:fromInterfaceOrientation];
+}
+
+#pragma mark -
 - (void)viewDidLoad
 {
     [super viewDidLoad];
-    self.title = @"ViewController";
+    self.title = @"UICollectionView&UITableView";
     //使用UINavigationController后导致UIScollView下移64px
     self.automaticallyAdjustsScrollViewInsets = NO;
+    [self setCellWidthHeight];
     [self initTabView];
     [self initCollectionView];
+}
+
+- (void)setCellWidthHeight
+{
+    self.cellWidth = [UIScreen mainScreen].bounds.size.width;
+    self.cellHeight = [UIScreen mainScreen].bounds.size.height - kCollectionViewY;
 }
 
 - (NSArray *)tabTitleArray
@@ -48,6 +98,7 @@
 #pragma mark - init UI
 - (void)initTabView
 {
+    __weak typeof(self) weakSelf = self;
     self.scrollView = [[UIScrollView alloc] init];
     self.scrollView.delegate = self;
     self.scrollView.contentSize = CGSizeMake(self.tabTitleArray.count * kButtonW, 0);
@@ -55,10 +106,9 @@
     self.scrollView.showsHorizontalScrollIndicator = NO;
     [self.view addSubview:self.scrollView];
     
-    __weak typeof(self) weakSelf = self;
     [self.scrollView makeConstraints:^(MASConstraintMaker *make) {
-        make.top.equalTo(@64);
-        make.height.equalTo(@35);
+        make.top.equalTo(@kScrollViewY);
+        make.height.equalTo(@kScrollViewH);
         make.left.right.equalTo(weakSelf.view);
     }];
     
@@ -87,6 +137,7 @@
     UIView *lineView = [[UIView alloc] init];
     lineView.backgroundColor = [UIColor redColor];
     [self.lineBgView addSubview:lineView];
+    
     [lineView makeConstraints:^(MASConstraintMaker *make) {
         make.top.equalTo(weakSelf.lineBgView);
         make.centerX.equalTo(weakSelf.lineBgView);
@@ -96,30 +147,30 @@
 
 - (void)initCollectionView
 {
+    __weak typeof(self) weakSelf = self;
     UICollectionViewFlowLayout *layout = [[UICollectionViewFlowLayout alloc] init];
-    layout.itemSize = CGSizeMake(kScreenWidth, 520);
     layout.scrollDirection = UICollectionViewScrollDirectionHorizontal;
-
+    
     self.collectionView = [[UICollectionView alloc] initWithFrame:CGRectZero collectionViewLayout:layout];
     self.collectionView.delegate = self;
     self.collectionView.dataSource = self;
     self.collectionView.pagingEnabled = YES;
-    self.collectionView.backgroundColor = [UIColor lightGrayColor];
+    self.collectionView.backgroundColor = [UIColor whiteColor];
     [self.collectionView registerClass:[HWCollectionViewCell class] forCellWithReuseIdentifier:kCellIdentifier];
     [self.view addSubview:self.collectionView];
     
-    __weak typeof(self) weakSelf = self;
     [self.collectionView makeConstraints:^(MASConstraintMaker *make) {
         make.top.equalTo(weakSelf.scrollView.bottom).offset(1);
         make.left.right.bottom.equalTo(weakSelf.view);
     }];
 }
 
+
 #pragma mark - action
 - (void)buttonOnClick:(UIButton *)button
 {
-    NSInteger cellIndex = button.tag;
     __weak typeof(self) weakSelf = self;
+    NSInteger cellIndex = button.tag;
     [UIView animateWithDuration:0.2 animations:^{
         CGFloat buttonX = cellIndex * kButtonW;
         CGRect tempF = weakSelf.lineBgView.frame;
@@ -132,6 +183,12 @@
 }
 
 #pragma mark - UICollectionViewDelegate
+- (CGSize)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout*)collectionViewLayout sizeForItemAtIndexPath:(NSIndexPath *)indexPath
+{
+    return CGSizeMake(kScreenWidth, self.cellHeight);
+}
+
+//此处不返回0会导致UICollectionView滚动的时候分页显示有问题
 - (CGFloat)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout*)collectionViewLayout minimumLineSpacingForSectionAtIndex:(NSInteger)section
 {
     return 0;
@@ -144,9 +201,15 @@
 
 - (UICollectionViewCell *)collectionView:(UICollectionView *)collectionView cellForItemAtIndexPath:(NSIndexPath *)indexPath
 {
+    __weak typeof(self) weakSelf = self;
     HWCollectionViewCell *cell = [collectionView dequeueReusableCellWithReuseIdentifier:kCellIdentifier forIndexPath:indexPath];
     cell.index = indexPath.row;
-    cell.navigationController = self.navigationController;
+    cell.didSelectRowCallBack = ^(NSString *content){
+        
+        NSString *title = [NSString stringWithFormat:@"collection_index:%d", weakSelf.cellIndex];
+        HWDetailViewController *vc = [[HWDetailViewController alloc] initWithTitle:title content:content];
+        [weakSelf.navigationController pushViewController:vc animated:YES];
+    };
     return cell;
 }
 
