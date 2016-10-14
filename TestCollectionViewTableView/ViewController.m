@@ -19,17 +19,17 @@
 @interface ViewController ()<UICollectionViewDelegate, UICollectionViewDataSource, UICollectionViewDelegateFlowLayout, UIScrollViewDelegate>
 
 /**
- UICollectionView当前显示的cell的索引
+ UICollectionViewCell row
  */
 @property (nonatomic, assign) NSInteger cellIndex;
 
 /**
- collectionViewCell的宽度
+ UICollectionViewCell的宽度
  */
 @property (nonatomic, assign) CGFloat cellWidth;
 
 /**
- collectionViewCell的高度
+ UICollectionViewCell的高度
  */
 @property (nonatomic, assign) CGFloat cellHeight;
 @property (nonatomic, strong) UIView *lineBgView;
@@ -188,7 +188,6 @@
     return CGSizeMake(kScreenWidth, self.cellHeight);
 }
 
-//此处不返回0会导致UICollectionView滚动的时候分页显示有问题
 - (CGFloat)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout*)collectionViewLayout minimumLineSpacingForSectionAtIndex:(NSInteger)section
 {
     return 0;
